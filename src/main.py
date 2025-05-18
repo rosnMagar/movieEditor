@@ -6,9 +6,14 @@ import numpy as np
 import os
 from dotenv import load_dotenv
 import json
+
 from mb_pexels import MB_OnlineVideo
 from mb_stage_assets import MB_OnlineVideo, MBStageAssets
 import mb_util
+import mb_subtitles 
+
+from tiktok_voice import Voice
+from moviepy.video.tools.subtitles import SubtitlesClip
 
 load_dotenv()
 
@@ -16,8 +21,8 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 genai.configure(api_key=GEMINI_API_KEY)
 
-OUT_FOLDER = "../output"
-TMP_FOLDER = "../tmp"
+OUT_FOLDER = "./output"
+TMP_FOLDER = "./tmp"
 FONT = "LilitaOne-Regular.ttf"
 
 try:
@@ -62,7 +67,7 @@ def generate_trivia(topic="random"):
         "assets":[""] // 3 keyword string keywords for related video clips
         }},
         cta:{{
-        "outro": "actual content" 
+        "content": "actual content" 
         "assets":[""] // 3 keyword string keywords for related video clips
         }},
         // this is a list with objects
@@ -99,27 +104,54 @@ def create_video(theme, audio_path, out_path = "trivia_video.mp4"):
 
     audio = AudioFileClip(audio_path)
     bg = VideoFileClip(url)
-    # bg = bg.resized((1080, 1920))
-    bg = bg.resized((240, 352))
+    bg = bg.resized((1080, 1920))
+    # bg = bg.resized((240, 352))
     # Composite the video
     video = CompositeVideoClip([bg]).with_audio(audio)
     video.write_videofile(f"{OUT_FOLDER}/{mb_util.snake_case(output['topic_keyword'])}.mp4", fps=24, threads=4)
 
 output = generate_trivia()
-print(output)
 
 # generate_audio(output["intro"] + output["cta"] + output["outro"], filename=f"{OUT_FOLDER}/{snake_case(output['topic_keyword'])}.mp3")
 # create_video(theme=output["topic_keyword"], audio_path=f"{OUT_FOLDER}/{snake_case(output['topic_keyword'])}.mp3")
 
-
-for i, key in enumerate(output.keys()):
+clips = []
+i = 0
+for key in output.keys():
     if key == "topic":
         continue
     if key == "facts":
         for fact in output[key]:
-            stager = MBStageAssets(fact['assets'], f"{TMP_FOLDER}/facts/clip_{i}")
-            stager.create_clip()
+            stager = MBStageAssets(fact['assets'], f"{TMP_FOLDER}/clip_{i}", text=fact['fact'], voice = Voice.ROCKET)
+            print("Fact:::", fact['assets'], f"{TMP_FOLDER}/clip_{i}", fact['fact'])
+            clips.append(VideoFileClip(stager.create_clip()))
+            i += 1
         continue
-    print(key)
-    stager = MBStageAssets(output[key]['assets'], f"{TMP_FOLDER}/clip_{i}")
-    stager.create_clip()
+    stager = MBStageAssets(output[key]['assets'], f"{TMP_FOLDER}/clip_{i}", text=output[key]['content'], voice=Voice.ROCKET)
+    print("OTHERS:::", output[key]['assets'], f"{TMP_FOLDER}/clip_{i}", output[key]['content'])
+    clips.append(VideoFileClip(stager.create_clip()))
+    i += 1
+
+video = concatenate_videoclips(clips)
+video.write_videofile(f"{OUT_FOLDER}/final_no_sub{output['topic']}_video.mp4")
+video.audio.write_audiofile(f"{OUT_FOLDER}/final_no_sub_{output['topic']}_video.mp3")
+
+
+# subtitles
+subtitles = mb_subtitles.generate_subtitles_assemblyai(f"{OUT_FOLDER}/final_no_sub_{output['topic']}_video.mp3")
+with open("subtitles.srt", "w") as f:
+    f.write(subtitles)
+
+generator = lambda text: TextClip(text=text, font='./LilitaOne-Regular.ttf',
+                                font_size=24, color='white', stroke_width=3, 
+                                text_align="center",
+                                stroke_color="black", method="caption", size=(int(video.w * 0.8), None))
+
+subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='utf-8')
+
+res = CompositeVideoClip([VideoFileClip(f"{OUT_FOLDER}/final_no_sub{output['topic']}_video.mp4"),
+                        subtitles.with_position(("center", "center"))])
+res.write_videofile(f"{OUT_FOLDER}/final_{output['topic']}_video.mp4")
+
+video.close()
+res.close()

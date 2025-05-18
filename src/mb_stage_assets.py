@@ -7,8 +7,6 @@ import mb_util
 import os
 import uuid
 
-STAGED_FOLDER = "../tmp/staged_audio"
-
 class MBStageAssets():
     """
     A class to download video assets from Pexels based on search keywords.
@@ -17,7 +15,7 @@ class MBStageAssets():
         keywords (list): List of search terms for finding videos
         dest (str): Destination folder for downloaded videos
     """
-    def __init__(self, keywords, dest = 'folder1', text = "This is a test"):
+    def __init__(self, keywords, dest = 'folder1', text = "This is a test", voice=Voice.US_FEMALE_1):
         """
         Initializes the MBStageAssets downloader.
         
@@ -28,6 +26,7 @@ class MBStageAssets():
         self.keywords = keywords
         self.text = text
         self.dest = dest
+        self.voice = voice 
 
     def create_clip(self):
         """
@@ -51,11 +50,11 @@ class MBStageAssets():
 
         for keyword in self.keywords:
             # video section
-            video_url = self.create_video(keyword)
+            video_url, artist, source_url = self.create_video(keyword)
             videos.append(video_url)
 
             # audio section
-            audio_url = self.create_audio(text=self.text, voice=Voice.MALE_GRINCH, file_name=self.dest)
+            audio_url = self.create_audio(text=self.text, voice=self.voice, file_name=self.dest)
 
         audio = AudioFileClip(audio_url)
         clip_duration = audio.duration
@@ -63,22 +62,27 @@ class MBStageAssets():
         bg = VideoFileClip(videos[0])
         
         video_index = 1
-        while bg.duration < clip_duration:
+        for video_path in videos[1:]:
+            if bg.duration > clip_duration:
+                break
+
             try:
                 bg2 = VideoFileClip(videos[video_index])
-                bg = CompositeVideoClip([bg, bg2])
-                video_index += 1
-            except:
-                # mu is the slow down factor to match the duration of the audio clip 
-                mu = bg.duration / clip_duration
-                bg = bg.without_audio().speedx(mu)
+                bg = concatenate_videoclips([bg, bg2])
+            except Exception as e:
+                print(f"error loading video {video_path}: {str(e)}")
+                
+        if bg.duration < clip_duration:
+            bg = bg.with_effects([vfx.MultiplySpeed(clip_duration)])
 
         # bg = bg.resized((1080, 1920))
         bg = bg.subclipped(0, clip_duration)
         bg = bg.resized((240, 352))
         # Composite the video
         video = CompositeVideoClip([bg]).with_audio(audio)
+
         video.write_videofile(f"{self.dest}.mp4", fps=24, threads=4)
+        return f"{self.dest}.mp4"
    
     def create_video(self, keyword):
         video = MB_OnlineVideo(keyword, 5)
@@ -94,11 +98,11 @@ class MBStageAssets():
     
     
     def create_audio(self, text = "This is a test", voice=Voice.PIRATE, file_name = ""):
-        if name == "":
-            name = "audio" + "_" + uuid.uuid4()
-        tts = MB_TTS(str=f"{STAGED_FOLDER}/{name}.mp3", voice=voice)
+        if file_name == "":
+            file_name = "audio" + "_" + uuid.uuid4()
+        tts = MB_TTS(dest=f"{file_name}.mp3", voice=voice)
         tts.speak(text)
-        return f"{STAGED_FOLDER}/{name}.mp3"
+        return f"{file_name}.mp3"
 
     
 

@@ -1,7 +1,7 @@
 from tiktok_voice import tts, Voice
 
 class MB_TTS():
-    def __init__(self, dest = "./tmp", voice = Voice.PIRATE, play_sound = True):
+    def __init__(self, dest = "./tmp", voice = Voice.PIRATE, play_sound = False):
         self.dest = dest
         self.voice = voice
         self.play_sound = play_sound
