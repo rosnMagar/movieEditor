@@ -13,6 +13,12 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 genai.configure(api_key=GEMINI_API_KEY)
 
+OUT_FOLDER = "output"
+
+try:
+    os.mkdir(OUT_FOLDER)
+except:
+    print("Output Folder Exists")
 
 def remove_emoji(text):
     return emoji.replace_emoji(text, replace="")
@@ -36,14 +42,14 @@ def generate_trivia(topic="random"):
         img_keywords: ["..",".."],
         wait_time: // time in seconds
         ], ... more}},
-        topic_keyword=""
+        topic_keyword="keywords related to the content" // one or two words
         for facts:
 
         intro:"",
         cta:"",
         outro:"",
         facts:[{{fact: "", img_keywords:[""...]}}...more facts],
-        topic_keyword=""
+        topic_keyword="keywords related to the content" // one or two words
 
         for trivia questions, you need to add a 10s or 5s timer after each question depending on the difficulty.
 
@@ -69,24 +75,30 @@ def generate_audio(text, filename="audio.mp3"):
     tts.save(filename)
     return filename
 
+def snake_case(text):
+    return str(text).replace(" ", "_")
+
 def create_video(theme, audio_path, out_path = "trivia_video.mp4"):
 
     pexels_image = MB_OnlineImage(query=theme)
-    url, photographer, src = pexels_image.download()
+    url, photographer, src = pexels_image.download(OUT_FOLDER)
     print(url, photographer, src)
 
     # txt_q = TextClip(text=f"Q: {question}", font="./Barlow-Regular.ttf", font_size=60, color="white", size=(1000, None)).with_position("center").with_duration(5)
     # txt_a = TextClip(text=f"A: {answer}", font="./Barlow-Regular.ttf", font_size=60, color="white", size=(1000, None)).with_position("center").with_start(5).with_duration(5)
     audio = AudioFileClip(audio_path)
-    bg = ImageClip(src).with_duration(audio.duration)
-    text = TextClip("Hello MoviePy!", font_size=70, color='white')
-    text = text.set_position('center').with_duration(10)
+    bg = ImageClip(url).with_duration(audio.duration)
+    # bg = bg.resized((1080, 1920))
+    bg = bg.resized((360, 680))
+    text = TextClip(font="Barlow-Regular.ttf", text="Hello MoviePy!", font_size=70, color='white')
+    text = text.with_position('center').with_duration(10)
 
     # Composite the video
-    video = CompositeVideoClip([bg, text])
-    video.write_videofile("image_background.mp4", fps=24)
+    video = CompositeVideoClip([bg, text]).with_audio(audio)
+    video.write_videofile(f"{OUT_FOLDER}/{snake_case(output['topic_keyword'])}.mp4", fps=24, threads=4)
 
 output = generate_trivia()
+print(output)
 
-generate_audio(output["intro"] + output["cta"] + output["outro"])
-create_video(output["topic_keyword"])
+generate_audio(output["intro"] + output["cta"] + output["outro"], filename=f"{OUT_FOLDER}/{snake_case(output['topic_keyword'])}.mp3")
+create_video(theme=output["topic_keyword"], audio_path=f"{OUT_FOLDER}/{snake_case(output['topic_keyword'])}.mp3")

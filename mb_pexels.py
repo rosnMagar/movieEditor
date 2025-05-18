@@ -16,18 +16,23 @@ class MB_OnlineImage():
 
     
     """This module does bla bla bla"""    
-    def download(self):
+    def download(self, destination="."):
         headers = {"Authorization": PEXELS_API_KEY}
         response = requests.get(self.url, headers=headers)
 
         # randomly chose any first 5 images to preserve variety
-        image_index = random.randint(1, 5)
+        image_index = random.randint(1, 3)
 
         if response.status_code == 200:
             data = response.json()
             photo = data['photos'][image_index]
+            image_data = requests.get(photo['src']['medium']).content
+            image_name = str(self.query).replace(" ", "_")
 
-            return photo['url'], photo['photographer'], photo['src']['medium']
+            with open(f"{destination}/{image_name}.jpg", "wb") as f:
+                f.write(image_data)
+
+            return f"{destination}/{image_name}.jpg", photo['photographer'], photo['src']['medium']
         
         else:
             raise Exception("Couldn't connect to the API")
