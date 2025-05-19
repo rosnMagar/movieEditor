@@ -56,6 +56,9 @@ class MBStageAssets():
             # audio section
             audio_url = self.create_audio(text=self.text, voice=self.voice, file_name=self.dest)
 
+        if len(videos) == 0:
+            video_url, artist, source_url = self.create_video("random")
+
         audio = AudioFileClip(audio_url)
         clip_duration = audio.duration
 
@@ -75,9 +78,10 @@ class MBStageAssets():
         if bg.duration < clip_duration:
             bg = bg.with_effects([vfx.MultiplySpeed(clip_duration)])
 
-        # bg = bg.resized((1080, 1920))
+        bg = bg.resized((1080, 1920))
         bg = bg.subclipped(0, clip_duration)
-        bg = bg.resized((240, 352))
+        # bg = bg.resized((240, 352))
+        # bg = bg.resized((360, 640))
         # Composite the video
         video = CompositeVideoClip([bg]).with_audio(audio)
 

@@ -24,6 +24,11 @@ class MB_OnlineVideo():
 
         if response.status_code == 200:
             data = response.json()
+            if len(data['videos']) == 0:
+                self.url = f"https://api.pexels.com/videos/search?query=random&per_page={self.per_page}&orientation=portrait"
+                response = requests.get(self.url, headers=headers)
+                data = response.json()
+
             video = data['videos'][0]
             video_data = requests.get(video['video_files'][0]["link"]).content
             video_name = str(self.query).replace(" ", "_")

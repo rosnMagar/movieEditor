@@ -70,7 +70,7 @@ def _fetch_audio_bytes(
     # Function to generate audio for each text chunk
     def generate_audio_chunk(index: int, text_chunk: str):
         try:
-            response = requests.post(endpoint["url"], json={"text": text_chunk, "voice": voice.value})
+            response = requests.post(endpoint["url"], json={"text": text_chunk, "voice": voice.value, "speed": 1.5})
             response.raise_for_status()
             audio_chunks[index] = response.json()[endpoint["response"]]
         except (requests.RequestException, KeyError):
