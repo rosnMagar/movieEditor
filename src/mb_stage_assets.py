@@ -1,3 +1,4 @@
+from mb_minecraft_subclip import MBMineCraftSubClip
 from mb_pexels import MB_OnlineVideo
 from mb_tts import MB_TTS
 from tiktok_voice import Voice
@@ -100,6 +101,18 @@ class MBStageAssets():
 
         return video_url, artist, source_url
     
+    def create_minecraft_clip(self):
+        audio_url = self.create_audio(text=self.text, voice=Voice.US_MALE_2, file_name=self.dest)
+        audio = AudioFileClip(audio_url)
+        clip_duration = audio.duration 
+
+        minecraft_clip = MBMineCraftSubClip(clip_duration)
+        bg = minecraft_clip.get_sub_clip() 
+        minecraft_clip.close_video()
+
+        video = CompositeVideoClip([bg]).with_audio(audio)
+        video.write_videofile(f"{self.dest}.mp4", fps=24, threads=4)
+        return f"{self.dest}.mp4"
     
     def create_audio(self, text = "This is a test", voice=Voice.PIRATE, file_name = ""):
         if file_name == "":

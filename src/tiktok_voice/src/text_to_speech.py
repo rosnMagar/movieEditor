@@ -6,6 +6,7 @@ import re
 from json import load
 from threading import Thread
 from typing import Dict, List, Optional
+import subprocess
 
 # Downloaded modules
 from playsound import playsound
@@ -70,7 +71,7 @@ def _fetch_audio_bytes(
     # Function to generate audio for each text chunk
     def generate_audio_chunk(index: int, text_chunk: str):
         try:
-            response = requests.post(endpoint["url"], json={"text": text_chunk, "voice": voice.value, "speed": 1.5})
+            response = requests.post(endpoint["url"], json={"text": text_chunk, "voice": voice.value, "speed": 2.0})
             response.raise_for_status()
             audio_chunks[index] = response.json()[endpoint["response"]]
         except (requests.RequestException, KeyError):
@@ -87,8 +88,28 @@ def _fetch_audio_bytes(
     if any(not chunk for chunk in audio_chunks):
         return None
 
-    # Concatenate and decode audio data from all chunks
-    return base64.b64decode("".join(audio_chunks))
+
+    
+    # Decode combined base64 into raw MP3 bytes
+    raw_bytes = base64.b64decode("".join(audio_chunks))
+
+    # ---------------------------------------------------
+    # Post-process: pipe through ffmpeg atempo=1.5 to speed up
+    # ---------------------------------------------------
+    proc = subprocess.Popen(
+        [
+            "ffmpeg",
+            "-i", "pipe:0",
+            "-filter:a", "atempo=1.5",
+            "-f", "mp3",
+            "pipe:1"
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL
+    )
+    processed_bytes, _ = proc.communicate(input=raw_bytes)
+    return processed_bytes
 
 def _load_endpoints() -> List[Dict[str, str]]:
     """Load endpoint configurations from a JSON file."""
