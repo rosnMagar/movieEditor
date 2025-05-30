@@ -1,4 +1,3 @@
-from turtle import bgcolor
 import google.generativeai as genai
 from gtts import gTTS
 from moviepy import *
@@ -12,7 +11,6 @@ from mb_stage_assets import MB_OnlineVideo, MBStageAssets
 import mb_util
 import mb_subtitles 
 
-from tiktok_voice import Voice
 from moviepy.video.tools.subtitles import SubtitlesClip
 
 load_dotenv()
@@ -36,54 +34,79 @@ def generate_trivia(topic="random"):
     else:
         sub_prompt = f"Chose the topic as: {topic} for telling facts about that topic."
     prompt = f"""
-        We are creating a short video like tiktok, or youtube short.
-        {sub_prompt}
-        Do not include any markdown, backticks, or code formatting — just output the content as plain text.
-        Also do not include "..." because the tts reads it as dot dot dot. 
+        Your primary goal is to generate a script for a short video (e.g., TikTok, YouTube Short) based on the specific {sub_prompt} provided by the user.
 
-        Give me a response in json-like format: 
+        Overall Output Requirements:
 
-        chose very unique facts to present, not the usual facts most people know. 
+        Format: The entire response MUST be a single, valid JSON object.
+        Content within JSON: All string values within the JSON (e.g., script lines, topic names) MUST be plain text. Do NOT use any Markdown, backticks, or other code formatting within these strings.
+        TTS-Friendliness: Script content must be optimized for Text-to-Speech (TTS) narration.
+        Avoid ellipses ("..."); write complete sentences instead.
+        Avoid abbreviations or complex symbols that TTS might misinterpret.
+        Use clear, concise language.
+        Video Script Requirements (to be reflected in the JSON structure):
 
-        While generating content follow the HTC pattern. First Create a great hook, then create 
-        tension and deliver the content. Use this pattern if you can.
+        Unique Facts: Prioritize surprising, lesser-known, and intriguing facts directly related to the {sub_prompt}. Avoid commonly known information.
+        HTC Pattern (Hook, Tension, Content):
+        Hook: Start with an engaging opening to immediately capture viewer attention.
+        Tension: Build curiosity or anticipation before revealing the main facts.
+        Content: Clearly present the unique facts.
+        Video Length: The script should be designed to produce a video approximately 40-60 seconds long.
+        Number of Facts:
+        Include at least 5 facts if the facts are very short and concise.
+        Include at least 3 facts if the facts are more detailed. Adjust as needed to meet the target video length.
+        Calls to Action (CTAs) & Engagement:
+        Do NOT include major CTAs at the very beginning of the script.
+        Incorporate opportunities for user interaction (e.g., likes, shares, comments).
+        Include a specific, creative question for viewers to answer in the comments section, related to the video's topic. This should ideally be towards the end.
 
-        - for facts:
-        topic:"",
-        intro:{{
-        "content": "actual content" 
-        "assets":[""] // 3 keyword string keywords for related video clips
-        }},
-        cta:{{
-        "content": "actual content" 
-        "assets":[""] // 3 keyword string keywords for related video clips
-        }},
-        cta:{{
-        "content": "actual content" 
-        "assets":[""] // 3 keyword string keywords for related video clips
-        }},
-        // this is a list with objects
-        facts:[{{fact: "", assets:[""...]}}...more facts],
+        JSON Structure Definition:
 
-        Remember this script is meant for reading by the tiktok text to speech api, so avoid any unnecessary text that confuses tts softwares. 
-        
-        Ask users to interact with the platform like comment, like and share.
-        Also ask them to answer something in comment. Get creative with this.
-        Do not CTA in the beginning do it in the middle of the video or at the end.
+        Please generate the JSON object with the following keys and structure:
 
-        Make sure you have at least 5 facts if it is short.
-        For longer ones you can have at least 3. Make sure the video script will be around 40s-60s long.
+        {{
+            "topic": "The core subject of the video, derived from {sub_prompt}",
+            "intro": {{
+                "content": "Engaging opening (1-2 sentences) that acts as a hook and builds tension/curiosity for the facts to come.",
+                "assets_keywords": ["keyword1", "keyword2", "keyword3"] // 3 concise keywords for related visuals
+            }},
+            "facts": [
+            {{
+                "fact": "Unique fact #1, presented clearly and engagingly.",
+                "assets_keywords": ["keyword1", "keyword2", "keyword3"]
+            }},
+            {{
+                "fact": "Unique fact #2, presented clearly and engagingly.",
+                "assets_keywords": ["keyword1", "keyword2", "keyword3"]
+            }}
+            // Add more fact objects here as needed, following the quantity guidelines
+            ],
+            "cta": {{ // Optional, can be brief. Place after a few facts.
+            "content": "A short prompt to encourage likes, shares, or a quick thought. Example: 'Pretty wild, right? If you agree, hit that like!'",
+            "assets_keywords": ["keyword1", "keyword2", "keyword3"]
+            }},
+            "outro": {{
+            "content": "Encourage follows, shares, and pose a creative, topic-related question for comments. Example: 'Want more mind-blowing facts? Follow us! And tell me in the comments: what's the most surprising thing you've learned about [Topic]?'",
+            "assets_keywords": ["keyword1", "keyword2", "keyword3"]
+            }}
+        }}
     """
-    model = genai.GenerativeModel("gemini-2.0-flash", generation_config=genai.GenerationConfig(temperature=1))
 
-    response = model.generate_content(prompt)
+    try:
+        model = genai.GenerativeModel("gemini-2.5-flash-preview-04-17", generation_config=genai.GenerationConfig(temperature=1))
 
-    # cleanup for ```json
-    output = response.text[len("```json"): len("```") * -1]
-    output = json.loads(mb_util.remove_emoji(output))
-    print(output)
+        response = model.generate_content(prompt)
 
-    return output 
+        # cleanup for ```json
+        output = response.text[len("```json"): len("```") * -1]
+        output = json.loads(mb_util.remove_emoji(output))
+        print(output)
+
+        return output 
+    except:
+        print("Error while generating the results, do you want to write the script yourself following the json guidelines?")
+        output = input("Json Input: ")
+        return json.loads(mb_util.remove_emoji(output))
 
 mode = int(input("""
 Minecraft mode or general mode?: 
@@ -112,43 +135,48 @@ elif mode == 2:
             continue
         if key == "facts":
             for fact in output[key]:
-                stager = MBStageAssets(fact['assets'], f"{TMP_FOLDER}/clip_{i}", text=fact['fact'], voice = Voice.MALE_FUNNY)
-                print("Fact:::", fact['assets'], f"{TMP_FOLDER}/clip_{i}", fact['fact'])
+                stager = MBStageAssets(fact['assets_keywords'], f"{TMP_FOLDER}/clip_{i}", text=fact['fact'], voice = Voice.MALE_FUNNY)
+                print("Fact:::", fact['assets_keywords'], f"{TMP_FOLDER}/clip_{i}", fact['fact'])
                 clips.append(VideoFileClip(stager.create_clip()))
                 i += 1
             continue
-        stager = MBStageAssets(output[key]['assets'], f"{TMP_FOLDER}/clip_{i}", text=output[key]['content'], voice=Voice.MALE_FUNNY)
-        print("OTHERS:::", output[key]['assets'], f"{TMP_FOLDER}/clip_{i}", output[key]['content'])
+        stager = MBStageAssets(output[key]['assets_keywords'], f"{TMP_FOLDER}/clip_{i}", text=output[key]['content'], voice=Voice.MALE_FUNNY)
+        print("OTHERS:::", output[key]['assets_keywords'], f"{TMP_FOLDER}/clip_{i}", output[key]['content'])
         clips.append(VideoFileClip(stager.create_clip()))
         i += 1
+elif mode == 3:
+    stager = MBStageAssets(['cats'], f"{TMP_FOLDER}/clip_1", text=output, voice=Voice.MALE_DEADPOOL, reddit_url="https://www.reddit.com/r/Millennials/comments/1kryeks/did_we_get_ripped_off_with_homework/")
+    clips.append(VideoFileClip(stager.create_minecraft_clip()))
 
 video = concatenate_videoclips(clips)
-if mode == 1:
+if mode == 1 or mode == 3:
     video.write_videofile(f"{OUT_FOLDER}/final_no_sub_minecraft_video.mp4")
     video.audio.write_audiofile(f"{OUT_FOLDER}/final_no_sub_minecraft_video.mp3")
 elif mode == 2:
     video.write_videofile(f"{OUT_FOLDER}/final_no_sub{mb_util.snake_case(output['topic'])}_video.mp4")
     video.audio.write_audiofile(f"{OUT_FOLDER}/final_no_sub_{mb_util.snake_case(output['topic'])}_video.mp3")
-
-
 # subtitles
 if mode == 1:
     subtitles = mb_subtitles.generate_word_level_subtitles_assemblyai(f"{OUT_FOLDER}/final_no_sub_minecraft_video.mp3")
-    background_color = None
-    with open("subtitles.srt", "w") as f:
-        f.write(subtitles)
-else:
-    subtitles = mb_subtitles.generate_subtitles_assemblyai(f"{OUT_FOLDER}/final_no_sub_{mb_util.snake_case(output['topic'])}_video.mp3")
-    background_color="#6496d9",
-    with open("subtitles.srt", "w") as f:
-        f.write(subtitles)
-
-generator = lambda text: TextClip(text=text, font='./LilitaOne-Regular.ttf',
+    generator = lambda text: TextClip(text=text, font='./LilitaOne-Regular.ttf',
                                 font_size=69,
                                 color='white', stroke_width=2, 
                                 text_align="center",
-                                bg_color=background_color,
                                 stroke_color="black", method="caption", size=(int(video.w * 0.8), 80))
+    with open("subtitles.srt", "w") as f:
+        f.write(subtitles)
+elif mode==2:
+    subtitles = mb_subtitles.generate_subtitles_assemblyai(f"{OUT_FOLDER}/final_no_sub_{mb_util.snake_case(output['topic'])}_video.mp3")
+
+    generator = lambda text: TextClip(text=text, font='./LilitaOne-Regular.ttf',
+                                font_size=52,
+                                color='white', stroke_width=2, 
+                                text_align="center",
+                                bg_color="#6496d9",
+                                stroke_color="black", method="caption", size=(int(video.w * 0.8), None))
+ 
+    with open("subtitles.srt", "w") as f:
+        f.write(subtitles)
 
 subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='utf-8')
 
