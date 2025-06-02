@@ -5,6 +5,8 @@ import uuid
 
 OUT_FOLDER = "./output"
 video_dir = input("Enter the video directory: ")
+font_size = input("Enter Font size(80 default): ")
+sub_height = int(input("Enter how hight the subtitles are needed to be(center Default): "))
 
 subtitles = mb_subtitles.generate_word_level_subtitles_assemblyai(video_dir)
 generator = lambda text: TextClip(text=text, font='./LilitaOne-Regular.ttf',
@@ -19,7 +21,7 @@ subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='ut
 
 file_name = f"{uuid.uuid4()}_with_sub.mp4"
 res = CompositeVideoClip([VideoFileClip(video_dir),
-                            subtitles.with_position(("center", "center"))])
+                            subtitles.with_position(("center", "center" if sub_height == 0 else sub_height))])
 res.write_videofile(f"{OUT_FOLDER}/{uuid.uuid4()}_with_sub.mp4")
 
 res.close()

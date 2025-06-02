@@ -135,17 +135,17 @@ elif mode == 2:
             continue
         if key == "facts":
             for fact in output[key]:
-                stager = MBStageAssets(fact['assets_keywords'], f"{TMP_FOLDER}/clip_{i}", text=fact['fact'], voice = Voice.MALE_FUNNY)
+                stager = MBStageAssets(fact['assets_keywords'], f"{TMP_FOLDER}/clip_{i}", text=fact['fact'])
                 print("Fact:::", fact['assets_keywords'], f"{TMP_FOLDER}/clip_{i}", fact['fact'])
                 clips.append(VideoFileClip(stager.create_clip()))
                 i += 1
             continue
-        stager = MBStageAssets(output[key]['assets_keywords'], f"{TMP_FOLDER}/clip_{i}", text=output[key]['content'], voice=Voice.MALE_FUNNY)
+        stager = MBStageAssets(output[key]['assets_keywords'], f"{TMP_FOLDER}/clip_{i}", text=output[key]['content'])
         print("OTHERS:::", output[key]['assets_keywords'], f"{TMP_FOLDER}/clip_{i}", output[key]['content'])
         clips.append(VideoFileClip(stager.create_clip()))
         i += 1
 elif mode == 3:
-    stager = MBStageAssets(['cats'], f"{TMP_FOLDER}/clip_1", text=output, voice=Voice.MALE_DEADPOOL, reddit_url="https://www.reddit.com/r/Millennials/comments/1kryeks/did_we_get_ripped_off_with_homework/")
+    stager = MBStageAssets(['cats'], f"{TMP_FOLDER}/clip_1", text=output, reddit_url="https://www.reddit.com/r/Millennials/comments/1kryeks/did_we_get_ripped_off_with_homework/")
     clips.append(VideoFileClip(stager.create_minecraft_clip()))
 
 video = concatenate_videoclips(clips)

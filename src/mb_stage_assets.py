@@ -104,7 +104,7 @@ class MBStageAssets():
 
         return video_url, artist, source_url
 
-    def create_user_selected_video(self, dir):
+    def create_user_selected_video(self, dir, audio_required = True):
         try:
             entries = os.listdir(dir)
             videos = []

@@ -1,17 +1,15 @@
-import google.generativeai as genai
+import traceback
+from turtle import position
+from Cython import nonecheck
 from moviepy import *
+from moviepy.video.tools.subtitles import SubtitlesClip
+import uuid
 import os
 from dotenv import load_dotenv
-import json
-from regex import W
 from termcolor import colored
 
-from mb_stage_assets import MBStageAssets
-import mb_util
-import mb_subtitles 
-import uuid
+import mb_subtitles
 
-from moviepy.video.tools.subtitles import SubtitlesClip
 
 load_dotenv()
 
@@ -24,64 +22,161 @@ try:
 except:
     print("Output Folder Exists")
 
-sub_mode = int(input("""
-1. Press 1 for single word sub
-2. Press 2 for general sub
-"""))
-
-print(colored(f"You selected: {sub_mode}", "green"))
-
-input_mode = int(input("""
-1. Press 1 for user defined script
-2. Press 2 for AI Script(Gemini)
-"""))
-
-print(colored(f"You Selected: {input_mode}", "green"))
-
 output = []
 
-for i in range(0, 5):
-    output[i] = input("Enter your {i} rank title: ")
 bg_dir = input("Enter the folder directory for background videos: ")
-print(colored("Should be numbered 1-5", "blue"))
+print(colored("Should be numbered 1-7", "blue"))
 
-output_video_name = uuid.uuid4() 
 
-video.write_videofile(f"{OUT_FOLDER}/final_no_sub{output_video_name}_video.mp4")
-video.audio.write_audiofile(f"{OUT_FOLDER}/final_no_sub_{output_video_name}_video.mp3")
-# subtitles
-if sub_mode == 1:
-    subtitles = mb_subtitles.generate_word_level_subtitles_assemblyai(f"{OUT_FOLDER}/final_no_sub_{output_video_name}_video.mp3")
+try:
+    entries = os.listdir(bg_dir)
+    clip_data = [] 
+    clips_index = 0
+
+    def get_rank_text(text, width, height, start, duration):
+        return (TextClip(text = text, font="./LilitaOne-Regular.ttf",
+                        font_size=64,
+                        color="white",
+                        stroke_width=2,
+                        text_align="left",
+                        stroke_color="black",
+                        method="label",
+                        size=(int(width), int(height * 0.7)))
+                        .with_position((2, 2))
+                        .with_start(start)
+                        .with_duration(duration))
+
+    with os.scandir(bg_dir) as entries:
+        for entry in reversed(list(entries)):
+            if entry.is_file():
+                print(colored(f"File Found: {entry.path}", 'green'))
+                try:
+
+                    # Attempt to load as a video clip
+                    print(colored("Filename should match title rank 1-5", "blue"))
+                    title = input("Enter your title for this video: ")
+
+                    out_filename = f"{TMP_FOLDER}/tmp_rank_{clips_index}.mp4"
+
+                    clip_data.append({
+                        "id": clips_index,
+                        "src_file": entry.path,
+                        "file_name": out_filename,
+                        "text": title
+                    })
+                    clips_index += 1
+
+                    # clip.close()
+
+                except Exception as e:
+                    # If it's not a valid video file, VideoFileClip will raise an error
+                    print(colored(f"Could not load {entry.name} as a video clip: {e}. Skipping.", "yellow"))
+                    print(traceback.format_exc())
+    
+    # exporting individual clips
+
+    # adding space between all initial numbers
+    clip_space_delta = 50
+    burn_texts = []
+   
+    for j, clip in enumerate(clip_data):
+
+        src_clip = VideoFileClip(clip['src_file'])
+        src_clip = src_clip.resized((1080, 1920))
+        number_texts = []
+
+        for i in range(0, len(clip_data)):
+            if i == 0:
+                color="#f3b610"
+            elif i == 1:
+                color = "#9e9e9e"
+            elif i == 2:
+                color="#be6029"
+            else:
+                color="#ffffff"
+            number_texts.append(TextClip(text = f"{i+1}.", font="./LilitaOne-Regular.ttf",
+                                font_size=100,
+                                color=color,
+                                stroke_width=2,
+                                text_align="left",
+                                stroke_color="black",
+                                method="label",
+                                size=((None, None))
+                                )
+                                .with_position((50, (clip_space_delta * 3 * i) + 400))
+                                .with_duration(src_clip.duration))
+
+        for i, burn_text in enumerate(burn_texts):
+            burn_texts[i] = burn_text.with_duration(src_clip.duration)
+    
+        burn_texts.append(TextClip(text = " " + clip['text'] + " ", font="./LilitaOne-Regular.ttf",
+                            font_size=50,
+                            color="white",
+                            stroke_width=2,
+                            text_align="left",
+                            stroke_color="black",
+                            method="label",
+                            size=((None, 75))
+                            )
+                            .with_position((150, ((len(clip_data) - j - 1) * clip_space_delta * 3) + 410))
+                            .with_duration(src_clip.duration))
+
+        composite_input = [src_clip]
+        composite_input.extend(number_texts)
+        composite_input.extend(burn_texts)
+        final_clip = CompositeVideoClip(composite_input)
+        final_clip.write_videofile(
+            clip['file_name'],
+            threads=os.cpu_count(), # Use all available CPU cores
+        )
+
+    if not clip_data:
+        print(colored(f"No valid video files found or loaded from directory: {bg_dir}", "red"))
+
+    print(colored(f"Successfully loaded {len(clip_data)} video clip(s).", "blue"))
+
+    # after videos are loaded:
+    output_video_name = uuid.uuid4() 
+
+    videos = []
+    for clip in clip_data:
+        videos.append(VideoFileClip(clip['file_name']))
+
+    joined_clip = concatenate_videoclips(videos)
+    final_clip = joined_clip.resized((1080, 1920))
+    joined_clip.write_videofile(
+        f"{OUT_FOLDER}/{output_video_name}_ranked_videos.mp4",
+        threads=os.cpu_count(), # Use all available CPU cores
+    )
+    joined_clip.close()
+
+    add_sub = input("Do you want to add subtitles too?[Y/N]: ")
+    if add_sub.upper() == "N":
+        exit()
+
+    sub_height = float(input("Enter how high the subtitles are needed to be(center Default): (0-1)"))
+
+    subtitles = mb_subtitles.generate_word_level_subtitles_assemblyai(f"{OUT_FOLDER}/{output_video_name}_ranked_videos.mp4")
     generator = lambda text: TextClip(text=text, font='./LilitaOne-Regular.ttf',
-                                font_size=69,
-                                color='white', stroke_width=2, 
+                                font_size=80,
+                                color='white', stroke_width=5, 
                                 text_align="center",
-                                stroke_color="black", method="caption", size=(int(video.w * 0.8), 80))
+                                stroke_color="black", method="caption", 
+                                size=((1080, 100)), 
+                                )
     with open("subtitles.srt", "w") as f:
         f.write(subtitles)
-elif sub_mode==2:
-    subtitles = mb_subtitles.generate_subtitles_assemblyai(f"{OUT_FOLDER}/final_no_sub_{output_video_name}_video.mp3")
 
-    generator = lambda text: TextClip(text=text, font='./LilitaOne-Regular.ttf',
-                                font_size=52,
-                                color='white', stroke_width=2, 
-                                text_align="center",
-                                bg_color="#6496d9",
-                                stroke_color="black", method="caption", size=(int(video.w * 0.8), None))
- 
-    with open("subtitles.srt", "w") as f:
-        f.write(subtitles)
+    subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='utf-8')
 
-subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='utf-8')
+    file_name = f"{output_video_name}_ranked_with_sub.mp4"
+    res = CompositeVideoClip([VideoFileClip(f"{OUT_FOLDER}/{output_video_name}_ranked_videos.mp4"),
+                                subtitles.with_position(("center", "center" if int(sub_height * 1920) == 0 else int(sub_height * 1920)))])
 
-if sub_mode == 1:
-    res = CompositeVideoClip([VideoFileClip(f"{OUT_FOLDER}/final_no_sub{output_video_name}_video.mp4"),
-                            subtitles.with_position(("center", "center"))])
-if sub_mode == 2:
-    res = CompositeVideoClip([VideoFileClip(f"{OUT_FOLDER}/final_no_sub{output_video_name}_video.mp4"),
-                            subtitles.with_position(("center", video.h * (1 - 0.3)))])
+    res.write_videofile(file_name,
+                        threads=os.cpu_count())
+    res.close()
 
-res.write_videofile(f"{OUT_FOLDER}/final_{output_video_name}_video.mp4")
-
-video.close()
-res.close()
+except Exception as e:
+    print(colored(f"Exception: {e}", "red"))
+    print(colored(traceback.format_exc(), "red"))
