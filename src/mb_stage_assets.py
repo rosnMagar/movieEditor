@@ -58,7 +58,7 @@ class MBStageAssets():
             videos.append(video_url)
 
             # audio section
-            audio_url = self.create_audio(text=self.text, voice=self.voice, file_name=self.dest)
+            audio_url = self.create_audio(text=self.text, file_name=self.dest)
 
         if len(videos) == 0:
             video_url, artist, source_url = self.create_video("random")

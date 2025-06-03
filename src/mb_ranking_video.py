@@ -169,7 +169,7 @@ try:
 
     subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='utf-8')
 
-    file_name = f"{output_video_name}_ranked_with_sub.mp4"
+    file_name = f"{OUT_FOLDER}/{output_video_name}_ranked_with_sub.mp4"
     res = CompositeVideoClip([VideoFileClip(f"{OUT_FOLDER}/{output_video_name}_ranked_videos.mp4"),
                                 subtitles.with_position(("center", "center" if int(sub_height * 1920) == 0 else int(sub_height * 1920)))])
 

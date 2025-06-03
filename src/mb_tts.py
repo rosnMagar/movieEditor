@@ -24,44 +24,11 @@ class MB_TTS():
     def __init__(self, dest = "./tmp"):
         self.dest = dest
 
-    def speak(self, text, speaking_speed=1.0):
+    def speak(self, text, speaking_speed=1.0, lang="en"):
     # arguments:
     #   - input text
-    #   - voice which is used for the audio
-    #   - output file name
-    #   - play sound after generating the audio
-
-
-    # Old code using External APIs
-
-        # tts(text, self.voice, self.dest, play_sound=self.play_sound)
-
-        # Define your desired voice settings
-        # Increase the speed (e.g., 1.1 for 10% faster, 1.2 for 20% faster)
-        # You might need to experiment to find the best value.
-        # custom_voice_settings = VoiceSettings(
-        #     stability=0.71, # Example value, adjust as needed
-        #     similarity_boost=0.5, # Example value, adjust as needed
-        #     style=0.0, # Example value, adjust as needed
-        #     use_speaker_boost=True, # Example value, adjust as needed
-        #     speed=1.2 # Adjust this value to change the speed
-        # )
-
-        # audio_stream = elevenlabs.text_to_speech.convert(
-        #     text=text,
-        #     voice_id="JBFqnCBsd6RMkjVDRZzb",
-        #     model_id="eleven_turbo_v2",
-        #     output_format="mp3_44100_128",
-        #     voice_settings=custom_voice_settings # Pass the custom voice settings here
-        # )
-
-        # with open(self.dest, "wb") as f:
-        #     for chunk in audio_stream:
-        #         if chunk:
-        #             f.write(chunk)
-
-        # print(f"Audio saved to {self.dest}")
-
+    #   - speaking speed 
+    #   - language of the model  
 
         # new version using Coqui TTS Self hosted AI Model
 
@@ -70,13 +37,8 @@ class MB_TTS():
             tts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2", progress_bar=True, gpu=False)
             print("TTS model initialized.")
 
-            # output_directory = "tmp"
-            # os.makedirs(output_directory, exist_ok=True)
-            # output_file_name = f"{self.dest}"
-            # output_file_path = os.path.join(output_directory, output_file_name)
-
             # --- IMPORTANT: Provide a reference audio for the desired male enthusiastic voice ---
-            speaker_reference_wav = "./backgrounds/sounds/brian_sample_fast.wav" # <--- CHANGE THIS
+            speaker_reference_wav = "./backgrounds/sounds/brain_sample.wav" # <--- CHANGE THIS
             # This file should be a clear recording of a male voice speaking with enthusiasm.
 
             if not os.path.exists(speaker_reference_wav):
@@ -90,8 +52,7 @@ class MB_TTS():
             tts.tts_to_file(
                 text=text,
                 speaker_wav=speaker_reference_wav,
-                # language="ja",
-                language="en",
+                language=lang,
                 speed=speaking_speed, # Coqui TTS speed parameter
                 file_path="./tmp_tts_slow.wav"
             )

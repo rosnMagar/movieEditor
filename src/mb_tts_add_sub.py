@@ -21,7 +21,7 @@ subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='ut
 
 file_name = f"{uuid.uuid4()}_with_sub.mp4"
 res = CompositeVideoClip([VideoFileClip(video_dir),
-                            subtitles.with_position(("center", "center" if sub_height == 0 else sub_height))])
+                            subtitles.with_position(("center", "center" if int(sub_height * 1920) == 0 else int(sub_height * 1920)))])
 res.write_videofile(f"{OUT_FOLDER}/{uuid.uuid4()}_with_sub.mp4")
 
 res.close()
