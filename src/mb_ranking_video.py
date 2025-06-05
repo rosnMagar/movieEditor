@@ -1,13 +1,12 @@
-from encodings.hz import codec
 import traceback
-from turtle import position
-from Cython import nonecheck
 from moviepy import *
 from moviepy.video.tools.subtitles import SubtitlesClip
 import uuid
 import os
 from dotenv import load_dotenv
 from termcolor import colored
+from moviepy import ColorClip 
+from mb_tts import MB_TTS
 
 import mb_subtitles
 
@@ -147,6 +146,29 @@ try:
                                     subtitles.with_position(("center", "center" if int(sub_height * 1920) == 0 else int(sub_height * 1920)))])
         except:
             res = CompositeVideoClip([composite_clip])
+
+        # generate audio and subtitles for clip intro
+        intro_audio_file_name = f"{clip['file_name']}_intro_clip.mp3"
+        tts = MB_TTS(intro_audio_file_name)
+        tts.speak(clip['text'], speaking_speed=1, lang='en')
+
+        intro_audio = AudioFileClip(intro_audio_file_name)
+        bg_img = ImageClip(res.get_frame(0.5)).with_duration(intro_audio.duration)
+
+        # bg_img = ColorClip(size=(1080, 1920), color=(0, 0, 0), duration=intro_audio.duration)
+
+        intro_text = TextClip(text=clip['text'], font='./LilitaOne-Regular.ttf',
+                                    font_size=60,
+                                    color='white', stroke_width=5, 
+                                    text_align="center",
+                                    stroke_color="black", method="caption", 
+                                    size=((900, 100)), 
+                                    ).with_position(("center", "center")).with_duration(intro_audio.duration)
+
+
+        bg = CompositeVideoClip([bg_img, intro_text]).with_audio(intro_audio)
+
+        res = concatenate_videoclips([bg, res])
 
         res.write_videofile(
             f"{clip['file_name']}.mp4",
