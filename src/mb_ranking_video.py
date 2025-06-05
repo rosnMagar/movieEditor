@@ -5,10 +5,12 @@ import uuid
 import os
 from dotenv import load_dotenv
 from termcolor import colored
-from moviepy import ColorClip 
+from skimage.filters import gaussian
+from skimage.util import img_as_float, img_as_ubyte
 from mb_tts import MB_TTS
 
 import mb_subtitles
+import numpy as np
 
 
 load_dotenv()
@@ -81,7 +83,7 @@ try:
    
     for j, clip in enumerate(clip_data):
 
-        src_clip = VideoFileClip(clip['src_file']).with_duration(2)
+        src_clip = VideoFileClip(clip['src_file'])
         src_clip = src_clip.resized((1080, 1920))
         number_texts = []
 
@@ -152,10 +154,14 @@ try:
         tts = MB_TTS(intro_audio_file_name)
         tts.speak(clip['text'], speaking_speed=1, lang='en')
 
-        intro_audio = AudioFileClip(intro_audio_file_name)
-        bg_img = ImageClip(res.get_frame(0.5)).with_duration(intro_audio.duration)
+        def apply_blur(image, sigma):
+            img_float = img_as_float(image)
+            blurred_image = gaussian(img_float, sigma=sigma, channel_axis=-1)
+            blurred_img_uint8 = img_as_ubyte(blurred_image)
+            return blurred_img_uint8 
 
-        # bg_img = ColorClip(size=(1080, 1920), color=(0, 0, 0), duration=intro_audio.duration)
+        intro_audio = AudioFileClip(intro_audio_file_name)
+        bg_img = ImageClip(apply_blur(res.get_frame(0.5), 10)).with_duration(intro_audio.duration)
 
         intro_text = TextClip(text=clip['text'], font='./LilitaOne-Regular.ttf',
                                     font_size=60,
