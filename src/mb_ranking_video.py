@@ -150,7 +150,7 @@ try:
             res = CompositeVideoClip([composite_clip])
 
         # generate audio and subtitles for clip intro
-        if i > 0:
+        if j > 0:
             intro_audio_file_name = f"{clip['file_name']}_intro_clip.mp3"
             tts = MB_TTS(intro_audio_file_name)
             tts.speak(clip['text'], speaking_speed=1, lang='en')
