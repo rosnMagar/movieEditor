@@ -1,3 +1,4 @@
+from encodings.hz import codec
 import traceback
 from turtle import position
 from Cython import nonecheck
@@ -26,7 +27,7 @@ output = []
 
 bg_dir = input("Enter the folder directory for background videos: ")
 print(colored("Should be numbered 1-7", "blue"))
-
+sub_height = float(input("Enter how high the subtitles are needed to be(center Default): (0-1)"))
 
 try:
     entries = os.listdir(bg_dir)
@@ -56,7 +57,7 @@ try:
                     print(colored("Filename should match title rank 1-5", "blue"))
                     title = input("Enter your title for this video: ")
 
-                    out_filename = f"{TMP_FOLDER}/tmp_rank_{clips_index}.mp4"
+                    out_filename = f"{TMP_FOLDER}/tmp_rank_{clips_index}"
 
                     clip_data.append({
                         "id": clips_index,
@@ -81,7 +82,7 @@ try:
    
     for j, clip in enumerate(clip_data):
 
-        src_clip = VideoFileClip(clip['src_file'])
+        src_clip = VideoFileClip(clip['src_file']).with_duration(2)
         src_clip = src_clip.resized((1080, 1920))
         number_texts = []
 
@@ -124,9 +125,31 @@ try:
         composite_input = [src_clip]
         composite_input.extend(number_texts)
         composite_input.extend(burn_texts)
-        final_clip = CompositeVideoClip(composite_input)
-        final_clip.write_videofile(
-            clip['file_name'],
+        composite_clip = CompositeVideoClip(composite_input)
+
+        composite_clip_audio_file = f"{TMP_FOLDER}/audio_tmp_composite_clip.mp3"
+        composite_clip.audio.write_audiofile(composite_clip_audio_file)
+
+        subtitles = mb_subtitles.generate_word_level_subtitles_assemblyai(composite_clip_audio_file)
+        generator = lambda text: TextClip(text=text, font='./LilitaOne-Regular.ttf',
+                                    font_size=80,
+                                    color='white', stroke_width=5, 
+                                    text_align="center",
+                                    stroke_color="black", method="caption", 
+                                    size=((1080, 100)), 
+                                    )
+        with open("subtitles.srt", "w") as f:
+            f.write(subtitles)
+        try:
+            subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='utf-8')
+
+            res = CompositeVideoClip([composite_clip,
+                                    subtitles.with_position(("center", "center" if int(sub_height * 1920) == 0 else int(sub_height * 1920)))])
+        except:
+            res = CompositeVideoClip([composite_clip])
+
+        res.write_videofile(
+            f"{clip['file_name']}.mp4",
             threads=os.cpu_count(), # Use all available CPU cores
         )
 
@@ -140,7 +163,7 @@ try:
 
     videos = []
     for clip in clip_data:
-        videos.append(VideoFileClip(clip['file_name']))
+        videos.append(VideoFileClip(f"{clip['file_name']}.mp4"))
 
     joined_clip = concatenate_videoclips(videos)
     final_clip = joined_clip.resized((1080, 1920))
@@ -149,32 +172,6 @@ try:
         threads=os.cpu_count(), # Use all available CPU cores
     )
     joined_clip.close()
-
-    add_sub = input("Do you want to add subtitles too?[Y/N]: ")
-    if add_sub.upper() == "N":
-        exit()
-
-    sub_height = float(input("Enter how high the subtitles are needed to be(center Default): (0-1)"))
-
-    subtitles = mb_subtitles.generate_word_level_subtitles_assemblyai(f"{OUT_FOLDER}/{output_video_name}_ranked_videos.mp4")
-    generator = lambda text: TextClip(text=text, font='./LilitaOne-Regular.ttf',
-                                font_size=80,
-                                color='white', stroke_width=5, 
-                                text_align="center",
-                                stroke_color="black", method="caption", 
-                                size=((1080, 100)), 
-                                )
-    with open("subtitles.srt", "w") as f:
-        f.write(subtitles)
-
-    subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='utf-8')
-
-    file_name = f"{OUT_FOLDER}/{output_video_name}_ranked_with_sub.mp4"
-    res = CompositeVideoClip([VideoFileClip(f"{OUT_FOLDER}/{output_video_name}_ranked_videos.mp4"),
-                                subtitles.with_position(("center", "center" if int(sub_height * 1920) == 0 else int(sub_height * 1920)))])
-
-    res.write_videofile(file_name,
-                        threads=os.cpu_count())
     res.close()
 
 except Exception as e:
