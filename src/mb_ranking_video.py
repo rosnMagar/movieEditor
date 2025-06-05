@@ -150,31 +150,32 @@ try:
             res = CompositeVideoClip([composite_clip])
 
         # generate audio and subtitles for clip intro
-        intro_audio_file_name = f"{clip['file_name']}_intro_clip.mp3"
-        tts = MB_TTS(intro_audio_file_name)
-        tts.speak(clip['text'], speaking_speed=1, lang='en')
+        if i > 0:
+            intro_audio_file_name = f"{clip['file_name']}_intro_clip.mp3"
+            tts = MB_TTS(intro_audio_file_name)
+            tts.speak(clip['text'], speaking_speed=1, lang='en')
 
-        def apply_blur(image, sigma):
-            img_float = img_as_float(image)
-            blurred_image = gaussian(img_float, sigma=sigma, channel_axis=-1)
-            blurred_img_uint8 = img_as_ubyte(blurred_image)
-            return blurred_img_uint8 
+            def apply_blur(image, sigma):
+                img_float = img_as_float(image)
+                blurred_image = gaussian(img_float, sigma=sigma, channel_axis=-1)
+                blurred_img_uint8 = img_as_ubyte(blurred_image)
+                return blurred_img_uint8 
 
-        intro_audio = AudioFileClip(intro_audio_file_name)
-        bg_img = ImageClip(apply_blur(res.get_frame(0.5), 10)).with_duration(intro_audio.duration)
+            intro_audio = AudioFileClip(intro_audio_file_name)
+            bg_img = ImageClip(apply_blur(res.get_frame(0.5), 10)).with_duration(intro_audio.duration)
 
-        intro_text = TextClip(text=clip['text'], font='./LilitaOne-Regular.ttf',
-                                    font_size=60,
-                                    color='white', stroke_width=5, 
-                                    text_align="center",
-                                    stroke_color="black", method="caption", 
-                                    size=((900, 100)), 
-                                    ).with_position(("center", "center")).with_duration(intro_audio.duration)
+            intro_text = TextClip(text=clip['text'], font='./LilitaOne-Regular.ttf',
+                                        font_size=60,
+                                        color='white', stroke_width=5, 
+                                        text_align="center",
+                                        stroke_color="black", method="caption", 
+                                        size=((900, 100)), 
+                                        ).with_position(("center", "center")).with_duration(intro_audio.duration)
 
 
-        bg = CompositeVideoClip([bg_img, intro_text]).with_audio(intro_audio)
+            bg = CompositeVideoClip([bg_img, intro_text]).with_audio(intro_audio)
 
-        res = concatenate_videoclips([bg, res])
+            res = concatenate_videoclips([bg, res])
 
         res.write_videofile(
             f"{clip['file_name']}.mp4",
