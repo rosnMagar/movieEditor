@@ -28,7 +28,10 @@ output = []
 
 bg_dir = input("Enter the folder directory for background videos: ")
 print(colored("Should be numbered 1-7", "blue"))
-sub_height = float(input("Enter how high the subtitles are needed to be(center Default): (0-1)"))
+require_sub = input("Require subtitles?: (Y/N)")
+
+if require_sub.upper() == "Y":
+    sub_height = float(input("Enter how high the subtitles are needed to be(center Default): (0-1)"))
 
 try:
     entries = os.listdir(bg_dir)
@@ -131,29 +134,32 @@ try:
         composite_clip_audio_file = f"{TMP_FOLDER}/audio_tmp_composite_clip.mp3"
         composite_clip.audio.write_audiofile(composite_clip_audio_file)
 
-        subtitles = mb_subtitles.generate_word_level_subtitles_assemblyai(composite_clip_audio_file)
-        generator = lambda text: TextClip(text=text, font='./LilitaOne-Regular.ttf',
-                                    font_size=80,
-                                    color='white', stroke_width=5, 
-                                    text_align="center",
-                                    stroke_color="black", method="caption", 
-                                    size=((1080, 100)), 
-                                    )
-        with open("subtitles.srt", "w") as f:
-            f.write(subtitles)
-        try:
-            subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='utf-8')
+        if require_sub.upper() == "Y":
+            subtitles = mb_subtitles.generate_word_level_subtitles_assemblyai(composite_clip_audio_file)
+            generator = lambda text: TextClip(text=text, font='./LilitaOne-Regular.ttf',
+                                        font_size=80,
+                                        color='white', stroke_width=5, 
+                                        text_align="center",
+                                        stroke_color="black", method="caption", 
+                                        size=((1080, 100)), 
+                                        )
+            with open("subtitles.srt", "w") as f:
+                f.write(subtitles)
+            try:
+                subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='utf-8')
 
-            res = CompositeVideoClip([composite_clip,
-                                    subtitles.with_position(("center", "center" if int(sub_height * 1920) == 0 else int(sub_height * 1920)))])
-        except:
+                res = CompositeVideoClip([composite_clip,
+                                        subtitles.with_position(("center", "center" if int(sub_height * 1920) == 0 else int(sub_height * 1920)))])
+            except:
+                res = CompositeVideoClip([composite_clip])
+        else:
             res = CompositeVideoClip([composite_clip])
 
         # generate audio and subtitles for clip intro
         if j > 0:
             intro_audio_file_name = f"{clip['file_name']}_intro_clip.mp3"
             tts = MB_TTS(intro_audio_file_name)
-            tts.speak(clip['text'], speaking_speed=1, lang='en')
+            tts.speak(clip['text'], speaking_speed=1.5, lang='en')
 
             def apply_blur(image, sigma):
                 img_float = img_as_float(image)
@@ -162,18 +168,9 @@ try:
                 return blurred_img_uint8 
 
             intro_audio = AudioFileClip(intro_audio_file_name)
-            bg_img = ImageClip(apply_blur(res.get_frame(0.5), 10)).with_duration(intro_audio.duration)
+            bg_img = ImageClip(apply_blur(res.get_frame(0.5), 10)).with_duration(intro_audio.duration - 0.5)
 
-            intro_text = TextClip(text=clip['text'], font='./LilitaOne-Regular.ttf',
-                                        font_size=60,
-                                        color='white', stroke_width=5, 
-                                        text_align="center",
-                                        stroke_color="black", method="caption", 
-                                        size=((900, 100)), 
-                                        ).with_position(("center", "center")).with_duration(intro_audio.duration)
-
-
-            bg = CompositeVideoClip([bg_img, intro_text]).with_audio(intro_audio)
+            bg = CompositeVideoClip([bg_img]).with_audio(intro_audio)
 
             res = concatenate_videoclips([bg, res])
 

@@ -8,9 +8,6 @@ tts = MB_TTS("./mb_tts_test.mp3")
 # tts.speak(text.replace("\n", " ").replace("\t", "").strip(), speaking_speed=1.5)
 
 text = """
-Did he just say the word?
-Kai had enough of him.
-He loves her so much.
-Couldn't get better!
+Poke Beetle Juice
 """
-tts.speak(text, speaking_speed=1, lang="en")
+tts.speak(text, speaking_speed=1.5, lang="en")
