@@ -60,6 +60,12 @@ try:
                     # Attempt to load as a video clip
                     print(colored("Filename should match title rank 1-5", "blue"))
                     title = input("Enter your title for this video: ")
+                    sub = input("Require Sub? (Y/N): ")
+
+                    if sub.upper() == "Y":
+                        sub = True
+                    else:
+                        sub = False
 
                     out_filename = f"{TMP_FOLDER}/tmp_rank_{clips_index}"
 
@@ -67,7 +73,8 @@ try:
                         "id": clips_index,
                         "src_file": entry.path,
                         "file_name": out_filename,
-                        "text": title
+                        "text": title,
+                        "sub": sub
                     })
                     clips_index += 1
 
@@ -134,11 +141,11 @@ try:
         composite_clip_audio_file = f"{TMP_FOLDER}/audio_tmp_composite_clip.mp3"
         composite_clip.audio.write_audiofile(composite_clip_audio_file)
 
-        if require_sub.upper() == "Y":
+        if clip['sub']:
             subtitles = mb_subtitles.generate_word_level_subtitles_assemblyai(composite_clip_audio_file)
             generator = lambda text: TextClip(text=text, font='./LilitaOne-Regular.ttf',
-                                        font_size=80,
-                                        color='white', stroke_width=5, 
+                                        font_size=100,
+                                        color='white', stroke_width=10, 
                                         text_align="center",
                                         stroke_color="black", method="caption", 
                                         size=((1080, 100)), 

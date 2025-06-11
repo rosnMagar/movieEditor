@@ -2,6 +2,12 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.gz
+
+/cv-corpus-19.0-delta-2024-09-13
+subtitles.srt
+tempCodeRunnerFile.py
+/tmp
 
 # C extensions
 *.so
