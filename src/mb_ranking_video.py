@@ -1,4 +1,5 @@
 import traceback
+import re
 from moviepy import *
 from moviepy.video.tools.subtitles import SubtitlesClip
 import uuid
@@ -38,6 +39,19 @@ try:
     clip_data = [] 
     clips_index = 0
 
+    def get_file_number(entry):
+        """
+        Helper function to extract the numerical part from a filename.
+        Returns the integer if found, otherwise a very low number to place
+        non-matching files at the end if they somehow get into the sorted list.
+        """
+        if entry.is_file() and entry.name.lower().endswith('.mp4'):
+            match = re.match(r'(\d+)\.mp4$', entry.name.lower())
+            if match:
+                return int(match.group(1))
+        return -1 # Return a value that ensures non-matching files are at the end when sorting numerically descending
+
+
     def get_rank_text(text, width, height, start, duration):
         return (TextClip(text = text, font="./LilitaOne-Regular.ttf",
                         font_size=64,
@@ -52,7 +66,7 @@ try:
                         .with_duration(duration))
 
     with os.scandir(bg_dir) as entries:
-        for entry in reversed(list(entries)):
+        for entry in sorted(list(entries), key=get_file_number, reverse=True):
             if entry.is_file():
                 print(colored(f"File Found: {entry.path}", 'green'))
                 try:
@@ -148,7 +162,7 @@ try:
                                         color='white', stroke_width=10, 
                                         text_align="center",
                                         stroke_color="black", method="caption", 
-                                        size=((1080, 100)), 
+                                        size=((1080, 200)), 
                                         )
             with open("subtitles.srt", "w") as f:
                 f.write(subtitles)
@@ -179,10 +193,29 @@ try:
 
             bg = CompositeVideoClip([bg_img]).with_audio(intro_audio)
 
+            subtitles = mb_subtitles.generate_word_level_subtitles_assemblyai(intro_audio_file_name)
+            generator = lambda text: TextClip(text=text, font='./LilitaOne-Regular.ttf',
+                                        font_size=100,
+                                        color='white', stroke_width=10, 
+                                        text_align="center",
+                                        stroke_color="black", method="caption", 
+                                        size=((1080, 200)), 
+                                        )
+            with open("subtitles.srt", "w") as f:
+                f.write(subtitles)
+            try:
+                subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='utf-8')
+
+                bg = CompositeVideoClip([bg,
+                                        subtitles.with_position(("center", "center" if int(sub_height * 1920) == 0 else int(sub_height * 1920)))])
+            except:
+                bg = CompositeVideoClip([bg])
+
             res = concatenate_videoclips([bg, res])
 
         res.write_videofile(
             f"{clip['file_name']}.mp4",
+            fps=30,
             threads=os.cpu_count(), # Use all available CPU cores
         )
 
@@ -203,6 +236,7 @@ try:
     joined_clip.write_videofile(
         f"{OUT_FOLDER}/{output_video_name}_ranked_videos.mp4",
         threads=os.cpu_count(), # Use all available CPU cores
+        fps=30
     )
     joined_clip.close()
     res.close()

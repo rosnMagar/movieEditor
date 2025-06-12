@@ -38,7 +38,7 @@ class MB_TTS():
             print("TTS model initialized.")
 
             # --- IMPORTANT: Provide a reference audio for the desired male enthusiastic voice ---
-            speaker_reference_wav = "./backgrounds/sounds/mark_sample.wav" # <--- CHANGE THIS
+            speaker_reference_wav = "./backgrounds/sounds/will_sample.wav" # <--- CHANGE THIS
             # This file should be a clear recording of a male voice speaking with enthusiasm.
 
             if not os.path.exists(speaker_reference_wav):

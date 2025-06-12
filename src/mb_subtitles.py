@@ -6,7 +6,7 @@ from datetime import timedelta
 
 load_dotenv()
 
-aai.settings.api_key = os.getenv('ASSEMBLY_API_KEY')
+aai.settings.api_key = os.getenv('ASSEMBLYAI_API_KEY')
 
 def generate_subtitles_assemblyai(audio_file):
 
@@ -28,6 +28,7 @@ def generate_word_level_subtitles_assemblyai(audio_file):
                                      format_text=True,
                                      )
 
+    # Transcribe the audio file
     transcript = aai.Transcriber(config=config).transcribe(audio_file)
 
     srt_lines = []
@@ -40,6 +41,8 @@ def generate_word_level_subtitles_assemblyai(audio_file):
 
         srt_lines.append(f"{i}\n{start_time} --> {end_time}\n{text}\n")
 
+    # to remove the last missing subtitle error
+    srt_lines.append(f"{i}\n{start_time} --> {end_time}\n{text}\n")
     return "\n".join(srt_lines)
 
 def format_timedelta(seconds: float) -> str:
