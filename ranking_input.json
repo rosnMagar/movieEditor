@@ -1,0 +1,49 @@
+{
+  "bg_dir": "/home/roshan/movieEditor/backgrounds/habosbabos",
+  "require_sub": true,
+  "sub_height" : 0.6,
+  "video_order": [2, 4, 3, 1, 0],
+  "video_meta":  [
+
+    {
+        "title": "This is 1",
+        "sub_required": false,
+        "intro_required": false,
+        "intro_speech": "This is perfect!",
+        "rank_index": 0
+    },
+
+    {
+        "title": "This is 2",
+        "sub_required": false,
+        "intro_required": false,
+        "intro_speech": "This is perfect!",
+        "rank_index": 1
+    },
+
+    {
+        "title": "This is 3",
+        "sub_required": false,
+        "intro_required": false,
+        "intro_speech": "This is perfect!",
+        "rank_index": 2
+    },
+
+    {
+        "title": "This is 4",
+        "sub_required": false,
+        "intro_required": false,
+        "intro_speech": "This is d!",
+        "rank_index": 3
+    },
+
+    {
+        "title": "This is 5",
+        "sub_required": false,
+        "intro_required": false,
+        "intro_speech": "This is awesome!",
+        "rank_index": 4
+    }
+
+  ]
+}

@@ -39,10 +39,13 @@ def generate_word_level_subtitles_assemblyai(audio_file):
         end_time = format_timedelta(word.end / 1000)
         text = word.text
 
-        srt_lines.append(f"{i}\n{start_time} --> {end_time}\n{text}\n")
+        if i == len(words):
+            # to remove the last missing subtitle error
+            srt_lines.append(f"{i}\n{start_time} --> {end_time}\n{text}\n")
+            srt_lines.append(f"{i}\n{start_time} --> {end_time}\n{text}\n")
+        else:
+            srt_lines.append(f"{i}\n{start_time} --> {end_time}\n{text}\n")
 
-    # to remove the last missing subtitle error
-    srt_lines.append(f"{i}\n{start_time} --> {end_time}\n{text}\n")
     return "\n".join(srt_lines)
 
 def format_timedelta(seconds: float) -> str:

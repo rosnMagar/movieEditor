@@ -1,3 +1,4 @@
+import json
 import traceback
 import re
 from moviepy import *
@@ -27,12 +28,15 @@ except:
 
 output = []
 
-bg_dir = input("Enter the folder directory for background videos: ")
-print(colored("Should be numbered 1-7", "blue"))
-require_sub = input("Require subtitles?: (Y/N)")
+with open("ranking_input.json", "r") as file:
+    data = json.load(file)
+    bg_dir = data['bg_dir']
+    require_sub = data['require_sub']
+    video_order = data['video_order']
+    video_meta = data['video_meta']
 
-if require_sub.upper() == "Y":
-    sub_height = float(input("Enter how high the subtitles are needed to be(center Default): (0-1)"))
+if require_sub:
+    sub_height = data['sub_height'] 
 
 try:
     entries = os.listdir(bg_dir)
@@ -66,20 +70,19 @@ try:
                         .with_duration(duration))
 
     with os.scandir(bg_dir) as entries:
-        for entry in sorted(list(entries), key=get_file_number, reverse=True):
+        for video_index, entry in enumerate(sorted(list(entries), key=get_file_number)):
             if entry.is_file():
                 print(colored(f"File Found: {entry.path}", 'green'))
                 try:
 
                     # Attempt to load as a video clip
                     print(colored("Filename should match title rank 1-5", "blue"))
-                    title = input("Enter your title for this video: ")
-                    sub = input("Require Sub? (Y/N): ")
 
-                    if sub.upper() == "Y":
-                        sub = True
-                    else:
-                        sub = False
+                    title = video_meta[video_index]['title']
+                    sub = video_meta[video_index]['sub_required']
+                    intro_required = video_meta[video_index]['intro_required']
+                    intro_speech = video_meta[video_index]['intro_speech']
+                    rank_index = video_meta[video_index]['rank_index']
 
                     out_filename = f"{TMP_FOLDER}/tmp_rank_{clips_index}"
 
@@ -88,7 +91,10 @@ try:
                         "src_file": entry.path,
                         "file_name": out_filename,
                         "text": title,
-                        "sub": sub
+                        "sub": sub,
+                        "intro_required": intro_required,
+                        "intro_speech": intro_speech,
+                        "rank": rank_index
                     })
                     clips_index += 1
 
@@ -105,10 +111,14 @@ try:
     clip_space_delta = 50
     burn_texts = []
    
-    for j, clip in enumerate(clip_data):
+    for j in video_order:
+
+        clip = clip_data[j]
 
         src_clip = VideoFileClip(clip['src_file'])
         src_clip = src_clip.resized((1080, 1920))
+
+        # done for every clip!
         number_texts = []
 
         for i in range(0, len(clip_data)):
@@ -132,6 +142,7 @@ try:
                                 .with_position((50, (clip_space_delta * 3 * i) + 400))
                                 .with_duration(src_clip.duration))
 
+
         for i, burn_text in enumerate(burn_texts):
             burn_texts[i] = burn_text.with_duration(src_clip.duration)
     
@@ -144,7 +155,7 @@ try:
                             method="label",
                             size=((None, 75))
                             )
-                            .with_position((150, ((len(clip_data) - j - 1) * clip_space_delta * 3) + 410))
+                            .with_position((150, ((len(clip_data) + (j - 5)) * clip_space_delta * 3) + 410))
                             .with_duration(src_clip.duration))
 
         composite_input = [src_clip]
@@ -166,6 +177,8 @@ try:
                                         )
             with open("subtitles.srt", "w") as f:
                 f.write(subtitles)
+            # subtitles generated make some changes
+            input(f"Edit Subtitles.srt for Clip: {clip['src_file']} Title: {clip['text']}  and press Enter to continue...")
             try:
                 subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='utf-8')
 
@@ -177,10 +190,10 @@ try:
             res = CompositeVideoClip([composite_clip])
 
         # generate audio and subtitles for clip intro
-        if j > 0:
+        if j > 0 and clip['intro_required']:
             intro_audio_file_name = f"{clip['file_name']}_intro_clip.mp3"
             tts = MB_TTS(intro_audio_file_name)
-            tts.speak(clip['text'], speaking_speed=1.5, lang='en')
+            tts.speak(clip['intro_speech'], speaking_speed=1.3, lang='en')
 
             def apply_blur(image, sigma):
                 img_float = img_as_float(image)
@@ -189,7 +202,7 @@ try:
                 return blurred_img_uint8 
 
             intro_audio = AudioFileClip(intro_audio_file_name)
-            bg_img = ImageClip(apply_blur(res.get_frame(0.5), 10)).with_duration(intro_audio.duration - 0.5)
+            bg_img = ImageClip(apply_blur(res.get_frame(1), 4)).with_duration(intro_audio.duration - 0.1)
 
             bg = CompositeVideoClip([bg_img]).with_audio(intro_audio)
 
@@ -203,6 +216,10 @@ try:
                                         )
             with open("subtitles.srt", "w") as f:
                 f.write(subtitles)
+            
+            # subtitles generated make some changes
+            input(f"Edit Subtitles.srt for intro: {j}  and press Enter to continue...")
+
             try:
                 subtitles = SubtitlesClip("subtitles.srt", make_textclip=generator, encoding='utf-8')
 
@@ -228,8 +245,8 @@ try:
     output_video_name = uuid.uuid4() 
 
     videos = []
-    for clip in clip_data:
-        videos.append(VideoFileClip(f"{clip['file_name']}.mp4"))
+    for video_index in video_order:
+        videos.append(VideoFileClip(f"{clip_data[video_index]['file_name']}.mp4"))
 
     joined_clip = concatenate_videoclips(videos)
     final_clip = joined_clip.resized((1080, 1920))
